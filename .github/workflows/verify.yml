@@ -1,0 +1,27 @@
+name: Verify
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Check for secrets
+        shell: powershell
+        run: ./scripts/Check-Secrets.ps1
+      - name: Test the secret scanner
+        shell: powershell
+        run: ./scripts/Check-Secrets.ps1 -SelfTest
+      - name: Run offline core tests
+        run: dotnet run --project tests/LineIntent.Tests -c Release
+      - name: Build Windows app
+        run: dotnet build src/LineIntent/LineIntent.csproj -c Release

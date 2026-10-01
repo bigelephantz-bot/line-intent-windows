@@ -1,0 +1,60 @@
+name: Controlled Windows UI smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lineintent-ui-smoke
+  cancel-in-progress: false
+
+jobs:
+  check-ref:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require reviewed default branch
+        env:
+          EXPECTED_REF: refs/heads/${{ github.event.repository.default_branch }}
+        run: |
+          if [ "$GITHUB_REF" != "$EXPECTED_REF" ]; then
+            echo 'UI smoke is restricted to the reviewed default branch.'
+            exit 1
+          fi
+  ui-smoke:
+    # Only manually dispatched, reviewed default-branch code reaches the dedicated desktop.
+    needs: check-ref
+    runs-on: [self-hosted, Windows, X64, lineintent-ui]
+    environment: ui-smoke
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Secret scan
+        shell: powershell
+        run: ./scripts/Check-Secrets.ps1
+      - name: Core regression
+        shell: powershell
+        run: dotnet run --project tests/LineIntent.Tests -c Release
+      - name: Build tested desktop executable
+        shell: powershell
+        run: dotnet build src/LineIntent/LineIntent.csproj -c Release
+      - name: Check desktop and run UI smoke
+        shell: powershell
+        run: ./scripts/Run-UiSmoke.ps1
+      - name: Upload synthetic reports only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-ui-smoke
+          retention-days: 7
+          path: |
+            artifacts/ui-smoke/preflight.json
+            artifacts/ui-smoke/results.txt
+            artifacts/ui-smoke/*.png

@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="src/LineIntent.Core/LineIntent.Core.csproj" />
+  <Project Path="src/LineIntent/LineIntent.csproj" />
+  <Project Path="tests/LineIntent.Tests/LineIntent.Tests.csproj" />
+</Solution>
